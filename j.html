@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Call Interface</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #0b141a, #1f1f2a);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      color: white;
+    }
+
+    .main-interface {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+      padding: 50px 70px;
+      border-radius: 25px;
+      background: rgba(0, 255, 150, 0.05);
+      box-shadow: 0 0 40px rgba(0, 255, 150, 0.5);
+      text-align: center;
+      animation: fadeIn 1s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .main-interface h1 {
+      font-size: 36px;
+      color: #25d366;
+      margin-bottom: 20px;
+    }
+
+    .option-btn {
+      width: 200px;
+      padding: 20px;
+      border-radius: 25px;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .option-btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 25px rgba(37, 211, 102, 0.5);
+    }
+
+    .voice-btn {
+      background: #555;
+      color: white;
+    }
+
+    .video-btn {
+      background: #25d366;
+      color: white;
+    }
+
+    /* Decorative hover effect */
+    .option-btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 5px 15px rgba(37, 211, 102, 0.5);
+    }
+  </style>
+</head>
+<body>
+
+<div class="main-interface">
+  <h1>Welcome</h1>
+  <button class="option-btn voice-btn" onclick="alert('Voice Call clicked!')">Voice Call 🎤</button>
+  <button class="option-btn video-btn" onclick="alert('Video Call clicked!')">Video Call 📹</button>
+</div>
+
+</body>
+</html>

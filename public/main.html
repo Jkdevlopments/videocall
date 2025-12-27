@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WhatsApp Style Video Call</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body { margin:0; background:#0b141a; font-family:Arial,sans-serif; color:white; overflow:hidden; }
+    #remote { position:fixed; inset:0; width:100vw; height:100vh; object-fit:cover; background:black; }
+    #local { position:fixed; bottom:100px; right:15px; width:120px; height:170px; border-radius:12px; border:2px solid white; object-fit:cover; z-index:10; display:none; }
+    #controls { position:fixed; bottom:15px; width:100%; display:flex; justify-content:center; gap:15px; z-index:20; }
+    button { padding:15px 18px; border-radius:50%; border:none; font-size:18px; cursor:pointer; }
+    .call { background:#25d366; color:white; }
+    .end { background:#ff3b30; color:white; }
+    .mute { background:#555; color:white; }
+    
+    /* Incoming Call UI */
+    #incomingCall { position:fixed; inset:0; background:radial-gradient(circle, #0b141a, black); display:none; align-items:center; justify-content:center; flex-direction:column; z-index:30; animation:slideIn 0.5s ease; }
+    @keyframes slideIn { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .ring { width:120px; height:120px; border-radius:50%; border:4px solid #25d366; animation:pulse 1.5s infinite; display:flex; align-items:center; justify-content:center; font-size:50px; }
+    @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(37,211,102,0.7);} 70% { box-shadow:0 0 0 25px rgba(37,211,102,0);} 100% { box-shadow:0 0 0 0 rgba(37,211,102,0);} }
+    #incomingCall button { margin-top:25px; padding:15px 35px; font-size:18px; border-radius:30px; }
+
+    /* Call End Toast */
+    #callEnded { position:fixed; top:40%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); padding:20px 30px; border-radius:30px; display:none; z-index:50; font-size:18px; }
+  </style>
+</head>
+<body>
+
+<video id="remote" autoplay playsinline></video>
+<video id="local" autoplay muted playsinline></video>
+
+<div id="controls">
+  <button class="mute" id="micBtn">🎤</button>
+  <button class="call" id="startBtn">📞</button>
+  <button class="end" id="endBtn">❌</button>
+</div>
+
+<div id="incomingCall">
+  <div class="ring">📹</div>
+  <h2>Incoming Video Call</h2>
+  <div style="display:flex; gap:20px; margin-top:20px;">
+    <button onclick="acceptCall()">Accept</button>
+    <button onclick="declineCall()" style="background:#ff3b30;">Decline</button>
+  </div>
+</div>
+
+<div id="callEnded">📴 Call Ended</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+let localStream, remoteOffer, micEnabled = true;
+
+/* MEDIA */
+navigator.mediaDevices.getUserMedia({ video:true, audio:true }).then(stream=>{
+  localStream=stream;
+  document.getElementById("local").srcObject=stream;
+  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+});
+
+/* REMOTE VIDEO */
+pc.ontrack = e => {
+  document.getElementById("remote").srcObject=e.streams[0];
+  document.getElementById("local").style.display="block";
+};
+
+/* ICE */
+pc.onicecandidate = e => { if(e.candidate) socket.emit("ice", e.candidate); };
+socket.on("ice", c => pc.addIceCandidate(c));
+
+/* START CALL */
+document.getElementById("startBtn").onclick = async () => {
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  socket.emit("offer", offer);
+};
+
+/* RECEIVE CALL */
+socket.on("offer", offer => {
+  remoteOffer=offer;
+  document.getElementById("incomingCall").style.display="flex";
+});
+
+/* ACCEPT CALL */
+async function acceptCall() {
+  document.getElementById("incomingCall").style.display="none";
+  await pc.setRemoteDescription(remoteOffer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  socket.emit("answer", answer);
+}
+
+/* DECLINE CALL */
+function declineCall() {
+  document.getElementById("incomingCall").style.display="none";
+  socket.emit("call-declined");
+}
+
+/* HANDLE ANSWER */
+socket.on("answer", ans => pc.setRemoteDescription(ans));
+
+/* HANDLE CALL DECLINED */
+socket.on("call-declined", ()=>showEndMessage("📴 Call Declined"));
+
+/* MIC TOGGLE */
+document.getElementById("micBtn").onclick = ()=>{
+  micEnabled=!micEnabled;
+  localStream.getAudioTracks()[0].enabled=micEnabled;
+  document.getElementById("micBtn").innerText=micEnabled?"🎤":"🔇";
+};
+
+/* END CALL */
+document.getElementById("endBtn").onclick = ()=>{
+  socket.emit("call-ended");
+  showEndMessage();
+};
+
+socket.on("call-ended", ()=>showEndMessage());
+
+function showEndMessage(msg="📴 Call Ended") {
+  const el=document.getElementById("callEnded");
+  el.innerText=msg;
+  el.style.display="block";
+
+  setTimeout(()=>{
+    el.style.display="none";
+    resetUI();
+    // 🔹 Switch back to main interface
+    window.location.href = "index.html"; // change if your main interface file has a different name
+  },3000);
+}
+
+function resetUI() {
+  if(localStream) localStream.getTracks().forEach(t=>t.stop());
+  document.getElementById("local").style.display="none";
+}
+</script>
+
+</body>
+</html>
